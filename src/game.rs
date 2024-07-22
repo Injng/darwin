@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2024, Lin Jiang (@Injng)
+ *
+ * Structs and functions for the game logic.
+ **/
+
 use rand::Rng;
 use crate::{ROWS, COLS};
 
