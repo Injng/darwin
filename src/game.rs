@@ -9,7 +9,7 @@ use crate::{ROWS, COLS};
 
 #[derive(Copy, Clone)]
 pub struct Chromosome {
-    pub strength: bool,
+    pub strength: u32,
 }
 
 #[derive(Copy, Clone)]
@@ -67,8 +67,10 @@ pub fn init_entities(cells: &mut [[Cell; COLS as usize]; ROWS as usize]) {
             let mut rng = rand::thread_rng();
             let spawn = rng.gen_range(0..4);
             if spawn == 1 {
+                let mut rng = rand::thread_rng();
+                let strength = rng.gen_range(0..100);
                 let cell = &mut cells[i as usize][j as usize];
-                let chromosome = Chromosome { strength: false };
+                let chromosome = Chromosome { strength };
                 let entity = Entity::new(cell.x, cell.y, chromosome);
                 cell.entities.push(entity);
             }
@@ -105,28 +107,18 @@ pub fn play(cells: &mut [[Cell; COLS as usize]; ROWS as usize]) {
                 continue;
             }
 
-            // only consider the strong entities
-            let mut strong: Vec<Entity> = Vec::new();
+            // make the strongest entity win
+            let mut strongest: &Entity = &cell.entities[0];
             for entity in &cell.entities {
-                if entity.chromosome.strength {
-                    strong.push(*entity);
+                if entity.chromosome.strength > strongest.chromosome.strength {
+                    strongest = entity;
+                } else if entity.chromosome.strength == strongest.chromosome.strength {
+                    let mut rng = rand::thread_rng();
+                    let winner = rng.gen_range(0..2);
+                    if winner == 1 { strongest = entity; }
                 }
             }
-
-            // if no strong entities, randomly pick a winner
-            if strong.is_empty() {
-                let mut rng = rand::thread_rng();
-                let winner = rng.gen_range(0..cell.entities.len());
-                cell.entities = vec![cell.entities[winner]];
-                continue;
-            }
-
-            // randomly pick a winner
-            if cell.entities.len() > 1 {
-                let mut rng = rand::thread_rng();
-                let winner = rng.gen_range(0..strong.len());
-                cell.entities = vec![cell.entities[winner]];
-            }
+            cell.entities = vec![*strongest];
         }
     }
 }
