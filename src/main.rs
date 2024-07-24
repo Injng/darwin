@@ -4,9 +4,11 @@
  * Main file that initializes the SDL2 window and event loop.
  **/
 
-pub mod theme;
+pub mod evolution;
 pub mod game;
+pub mod theme;
 
+use evolution::evolve;
 use game::{Cell, Entity, init_entities, play};
 
 use core::array::from_fn;
@@ -15,8 +17,9 @@ use sdl2::render::Canvas;
 use std::thread::sleep;
 use std::time::Duration;
 
-const ROWS: u32 = 10;
-const COLS: u32 = 16;
+const ROWS: u32 = 20;
+const COLS: u32 = 32;
+const OFFSET: u32 = 5;
 
 /// Draw a grid on the canvas
 fn draw_grid(canvas: &mut Canvas<sdl2::video::Window>, width: u32, height: u32, cols: u32, rows: u32) {
@@ -60,7 +63,7 @@ fn main() {
     }
 
     // initialize entities
-    init_entities(&mut cells);
+    init_entities(&mut cells, Vec::new());
 
     // create event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -68,21 +71,37 @@ fn main() {
     'running: loop {
         if !is_paused {
             // draw things
+            let mut entity_count = 0;
             canvas.set_draw_color(theme::BACKGROUND);
             canvas.clear();
             draw_grid(&mut canvas, 1440, 900, COLS, ROWS);
             for i in 0..ROWS {
                 for j in 0..COLS {
                     for entity in &cells[i as usize][j as usize].entities {
-                        draw_entity(&mut canvas, *entity, 10);
+                        draw_entity(&mut canvas, *entity, OFFSET);
+                        entity_count += 1;
                     }
                 }
             }
             canvas.present();
 
             // advance game turns
-            sleep(Duration::from_millis(100));
+            sleep(Duration::from_millis(10));
             play(&mut cells);
+
+            // evolve when only four entities remain
+            if entity_count <= 4 {
+                let mut entities: Vec<Entity> = Vec::new();
+                for i in 0..ROWS {
+                    for j in 0..COLS {
+                        for entity in &cells[i as usize][j as usize].entities {
+                            entities.push(*entity);
+                        }
+                    }
+                }
+                let chromosomes = evolve(entities, 5);
+                init_entities(&mut cells, chromosomes);
+            }
         }
 
         for event in event_pump.poll_iter() {

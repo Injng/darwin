@@ -1,5 +1,3 @@
-use std::u32::MAX;
-
 /**
  * Copyright (c) 2024, Lin Jiang (@Injng)
  *
@@ -7,14 +5,9 @@ use std::u32::MAX;
  **/
 
 use rand::{Rng, distributions::{Distribution, Uniform}};
+use std::u32::MAX;
 use crate::{ROWS, COLS};
-
-#[derive(Copy, Clone)]
-pub struct Chromosome {
-    pub strength: u32,
-    pub aggressive: u32,
-    pub agility: u32,
-}
+use crate::evolution::Chromosome;
 
 #[derive(Copy, Clone)]
 pub struct Entity {
@@ -89,23 +82,41 @@ pub struct Cell {
     pub entities: Vec<Entity>,
 }
 
+/// Clear the cell grid of any entities
+fn clear_cells(cells: &mut [[Cell; COLS as usize]; ROWS as usize]) {
+    for i in 0..ROWS {
+        for j in 0..COLS {
+            cells[i as usize][j as usize].entities.clear();
+        }
+    }
+}
+
 /// Initialize entities on the cell grid
-pub fn init_entities(cells: &mut [[Cell; COLS as usize]; ROWS as usize]) {
+pub fn init_entities(cells: &mut [[Cell; COLS as usize]; ROWS as usize], chromosomes: Vec<Chromosome>) {
+    clear_cells(cells);
+    let mut count = 0;
     for i in 0..ROWS {
         for j in 0..COLS {
             let mut rng = rand::thread_rng();
             let spawn = rng.gen_range(0..4);
             if spawn == 1 {
-                // generate random values for genes
-                let bounds = Uniform::from(0..100);
-                let mut rng = rand::thread_rng();
-                let strength = bounds.sample(&mut rng);
-                let aggressive = bounds.sample(&mut rng);
-                let agility = bounds.sample(&mut rng);
+                let chromosome: Chromosome;
+                if chromosomes.is_empty() {
+                    // if no chromosomes are given, generate random values for genes
+                    let bounds = Uniform::from(0..100);
+                    let mut rng = rand::thread_rng();
+                    let strength = bounds.sample(&mut rng);
+                    let aggressive = bounds.sample(&mut rng);
+                    let agility = bounds.sample(&mut rng);
+                    chromosome = Chromosome { strength, aggressive, agility };
+                } else {
+                    // otherwise select next chromosome
+                    chromosome = chromosomes[count % chromosomes.len()];
+                    count += 1;
+                }
 
                 // add to entities
                 let cell = &mut cells[i as usize][j as usize];
-                let chromosome = Chromosome { strength, aggressive, agility };
                 let entity = Entity::new(cell.x, cell.y, chromosome);
                 cell.entities.push(entity);
             }
