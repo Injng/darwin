@@ -7,7 +7,7 @@
 use rand::distributions::{Distribution, Uniform};
 use crate::game::Entity;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Chromosome {
     pub strength: u32,
     pub aggressive: u32,

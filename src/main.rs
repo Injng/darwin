@@ -17,9 +17,9 @@ use sdl2::render::Canvas;
 use std::thread::sleep;
 use std::time::Duration;
 
-const ROWS: u32 = 20;
-const COLS: u32 = 32;
-const OFFSET: u32 = 5;
+const ROWS: u32 = 10;
+const COLS: u32 = 16;
+const OFFSET: u32 = 10;
 
 /// Draw a grid on the canvas
 fn draw_grid(canvas: &mut Canvas<sdl2::video::Window>, width: u32, height: u32, cols: u32, rows: u32) {
@@ -35,12 +35,12 @@ fn draw_grid(canvas: &mut Canvas<sdl2::video::Window>, width: u32, height: u32, 
 }
 
 /// Render entity on the canvas
-fn draw_entity(canvas: &mut Canvas<sdl2::video::Window>, entity: Entity, offset: u32) {
+fn draw_entity(canvas: &mut Canvas<sdl2::video::Window>, entity: Entity, offset: u32, color: usize) {
     let grid_width = 1440 / COLS;
     let grid_height = 900 / ROWS;
     let x = entity.x * grid_width + offset;
     let y = entity.y * grid_height + offset;
-    canvas.set_draw_color(theme::CELL);
+    canvas.set_draw_color(theme::CELL[color]);
     canvas.fill_rect(sdl2::rect::Rect::new(x as i32, y as i32, grid_width - 2 * offset, grid_height - 2 * offset)).unwrap();
 }
 
@@ -68,6 +68,7 @@ fn main() {
     // create event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut is_paused = false;
+    let mut generation = 0;
     'running: loop {
         if !is_paused {
             // draw things
@@ -78,7 +79,7 @@ fn main() {
             for i in 0..ROWS {
                 for j in 0..COLS {
                     for entity in &cells[i as usize][j as usize].entities {
-                        draw_entity(&mut canvas, *entity, OFFSET);
+                        draw_entity(&mut canvas, *entity, OFFSET, generation);
                         entity_count += 1;
                     }
                 }
@@ -86,21 +87,35 @@ fn main() {
             canvas.present();
 
             // advance game turns
-            sleep(Duration::from_millis(10));
+            // sleep(Duration::from_millis(10));
             play(&mut cells);
 
             // evolve when only four entities remain
             if entity_count <= 4 {
-                let mut entities: Vec<Entity> = Vec::new();
-                for i in 0..ROWS {
-                    for j in 0..COLS {
-                        for entity in &cells[i as usize][j as usize].entities {
-                            entities.push(*entity);
+                // check if generation has reached 13; if so, print info of remaining entities
+                if generation == 13 {
+                    for i in 0..ROWS {
+                        for j in 0..COLS {
+                            for entity in &cells[i as usize][j as usize].entities {
+                                println!("Entity at ({}, {}) with chromosome {:?}", entity.x, entity.y, entity.chromosome);
+                            }
                         }
                     }
+                    is_paused = true;
+                } else {
+                    // otherwise, evolve entities for next generation
+                    let mut entities: Vec<Entity> = Vec::new();
+                    for i in 0..ROWS {
+                        for j in 0..COLS {
+                            for entity in &cells[i as usize][j as usize].entities {
+                                entities.push(*entity);
+                            }
+                        }
+                    }
+                    let chromosomes = evolve(entities, 20);
+                    init_entities(&mut cells, chromosomes);
+                    generation += 1;
                 }
-                let chromosomes = evolve(entities, 5);
-                init_entities(&mut cells, chromosomes);
             }
         }
 
